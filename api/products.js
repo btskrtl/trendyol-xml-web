@@ -1,17 +1,37 @@
-import fs from "fs";
-import path from "path";
-import xml2js from "xml2js";
+const express = require('express');
+const cors = require('cors');
+const fs = require('fs');
+const xml2js = require('xml2js');
+const path = require('path');
 
-export default async function handler(req, res) {
-  try {
-    const filePath = path.join(process.cwd(), "urunler.xml");
-    const xmlData = fs.readFileSync(filePath, "utf8");
+const app = express();
+const PORT = process.env.PORT || 3000;
 
-    const parser = new xml2js.Parser();
-    const jsonData = await parser.parseStringPromise(xmlData);
+app.use(cors());
+app.use(express.json());
 
-    res.status(200).json(jsonData);
-  } catch (err) {
-    res.status(500).json({ error: "XML okunamadı veya parse edilemedi", details: err.message });
-  }
-}
+// Ana route: API çalışıyor testi
+app.get('/', (req, res) => {
+  res.send('Merhaba, API çalışıyor!');
+});
+
+// /api/products route: XML'i JSON'a çevirip döndür
+app.get('/products', (req, res) => {
+  const xmlFile = path.join(__dirname, '..', 'urunler.xml');
+
+  fs.readFile(xmlFile, 'utf-8', (err, data) => {
+    if (err) return res.status(500).json({ error: 'XML dosyası okunamadı' });
+
+    xml2js.parseString(data, { explicitArray: false }, (err, result) => {
+      if (err) return res.status(500).json({ error: 'XML parse edilemedi' });
+
+      // JSON'u direkt gönder
+      res.json(result);
+    });
+  });
+});
+
+// Sunucuyu başlat
+app.listen(PORT, () => {
+  console.log(`Server ${PORT} portunda çalışıyor`);
+});
