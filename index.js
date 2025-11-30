@@ -1,50 +1,38 @@
-const express = require("express");
-const fs = require("fs");
-const xml2js = require("xml2js");
+const express = require('express');
+const cors = require('cors');
+const fs = require('fs');
+const xml2js = require('xml2js');
 
 const app = express();
+const PORT = process.env.PORT || 3000;
+
+app.use(cors());
 app.use(express.json());
 
-app.get("/products", async (req, res) => {
-  try {
-    const xmlData = fs.readFileSync("urunler.xml", "utf8");
+// Ana sayfa
+app.get('/', (req, res) => {
+  res.send('Merhaba, API çalışıyor!');
+});
 
-    xml2js.parseString(xmlData, { explicitArray: false, trim: true }, (err, result) => {
+// XML dosyasını JSON'a çevirip döndüren route
+app.get('/products', (req, res) => {
+  const xmlFile = './data/products.xml'; // XML dosyanın yolu
+
+  fs.readFile(xmlFile, 'utf-8', (err, data) => {
+    if (err) {
+      return res.status(500).json({ error: 'XML dosyası okunamadı' });
+    }
+
+    xml2js.parseString(data, { explicitArray: false }, (err, result) => {
       if (err) {
-        return res.status(500).send("XML parse hatası");
+        return res.status(500).json({ error: 'XML parse edilemedi' });
       }
-
-      // Ürünleri JSON olarak ayıklama
-      let urunler = result.Root.Urunler.Urun;
-
-      // Eğer tek ürün varsa diziye al
-      if (!Array.isArray(urunler)) {
-        urunler = [urunler];
-      }
-
-      // İstenilen alanları seçerek döndür
-      const jsonUrunler = urunler.map(u => ({
-        UrunKartiID: u.UrunKartiID,
-        UrunAdi: u.UrunAdi,
-        Aciklama: u.Aciklama,
-        Marka: u.Marka,
-        Cinsiyet: u.Cinsiyet,
-        Kategori: u.Kategori,
-        UrunUrl: u.UrunUrl,
-        ToplamAdet: u.ToplamAdet,
-        UrunBayiFiyat: u.UrunBayiFiyat,
-        Resimler: u.Resimler?.Resim || [],
-        Varyasyonlar: u.UrunSecenek?.Secenek ? (Array.isArray(u.UrunSecenek.Secenek) ? u.UrunSecenek.Secenek : [u.UrunSecenek.Secenek]) : []
-      }));
-
-      res.json(jsonUrunler);
+      res.json(result);
     });
-
-  } catch (err) {
-    res.status(500).send("Dosya okunamadı");
-  }
+  });
 });
 
 // Sunucuyu başlat
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`Sunucu ${PORT} portunda çalışıyor`));
+app.listen(PORT, () => {
+  console.log(`Server ${PORT} portunda çalışıyor`);
+});
